@@ -4,6 +4,10 @@
 # Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
 VAGRANTFILE_API_VERSION = "2"
 
+if File.directory?('.git')
+  abort('Git checkouts are deprecated')
+end
+
 #Vagrant.require_version ">= 1.5.0"
 if `vagrant --version` < 'Vagrant 1.5.0'
     abort('Your Vagrant is too old. Please install at least 1.5.0')
