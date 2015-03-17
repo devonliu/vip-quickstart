@@ -23,13 +23,6 @@ $github_plugins = {
 
 include database::settings
 
-# Delete broken plugins
-file { '/srv/www/wp-content/plugins/log-viewer':
-  ensure => 'absent',
-  force  => true,
-  before => Wp::Site['/srv/www/wp'],
-}
-
 # Install WordPress
 wp::site { '/srv/www/wp':
   url             => $quickstart_domain,
