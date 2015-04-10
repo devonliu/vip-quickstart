@@ -120,7 +120,8 @@ function options_sync_package_downloader() {
 		var current_state = -1;
 		var status_action_interval = false;
 		var request_package_interval = 15000;
-		var states = [ 'request-package', 'download-package', 'generate-preview' ];
+		var request_status_interval = 5000;
+		var states = [ 'request-package', 'download-package', 'download-status', 'generate-preview' ];
 		next_state();
 
 		function update_status_row() {
@@ -136,13 +137,9 @@ function options_sync_package_downloader() {
 		}
 
 		function do_status_actions() {
-			var request = $.ajax( ajaxurl, {
-				data: {
-					action: 'qs_options_sync-' + states[current_state],
-					_wpnonce: $( '#wpnonce' ).val(),
-				},
-				dataType: 'json',
-			} );
+			
+			var request = create_status_request();
+
 
 			switch ( current_state ) {
 				case 0:
@@ -160,14 +157,42 @@ function options_sync_package_downloader() {
 					break;
 
 				case 2:
+					if ( !status_action_interval ) {
+						status_action_interval = setInterval( do_status_actions, request_status_interval );
+					}
+					
+					// Check the download status
+					request.complete( parse_download_status_response );
+					break;
+
+				case 3:
 					// Get the next url
 					request.complete( parse_package_generate_preview_response );
 					break;
 			}
 		}
 
+		function create_status_request() {
+			switch(current_state) {
+				case 2:
+					return $.ajax( "http://vip.local:3000/download-status", {
+						dataType: 'json'
+					} );
+
+					break;
+
+				default:
+					return $.ajax( ajaxurl, {
+						data: {
+							action: 'qs_options_sync-' + states[current_state],
+							_wpnonce: $( '#wpnonce' ).val(),
+						},
+						dataType: 'json',
+					});
+			}
+		}
+
 		function parse_package_generation_status_response( full_response ) {
-			console.log( full_response );
 			var response = full_response.responseJSON;
 
 			if ( ! response.success ) {
@@ -184,21 +209,35 @@ function options_sync_package_downloader() {
 		}
 
 		function parse_package_download_response( full_response ) {
-			console.log( full_response );
 			var response = full_response.responseJSON;
 
 			if ( ! response.success ) {
 				handle_failure();
 				return;
 			}
+			else {
+				current_state = 2;
+				do_status_actions(); // Don't call next_state() so the UI doesn't update yet
+			}
+		}
 
-			next_state();
+		function parse_download_status_response( full_response ) {
+			var response = full_response.responseJSON;
+			
+			// If finished downloading, check success
+			if( ! response.downloading ) {
+				if( response.success ) {
+					next_state();
+				}
+				else {
+					handle_failure();
+					return;
+				}
+			}
 		}
 
 		function parse_package_generate_preview_response( full_response ) {
-			console.log( full_response );
 			var response = full_response.responseJSON;
-
 			if ( ! response.success || typeof response.data.preview_url === 'undefined' ) {
 				handle_failure();
 				return;
