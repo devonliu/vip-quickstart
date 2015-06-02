@@ -74,7 +74,7 @@ function concat_get_path( $uri ) {
 	if ( false !== strpos( $uri, '..' ) || false !== strpos( $uri, "\0" ) )
 		concat_http_status_exit( 400 );
 
-	return CONCAT_FILES_ROOT . ( '/' != $uri[0] ? '/' : CONCAT_WP_DIR ) . $uri;
+	return CONCAT_FILES_ROOT . ( '/' != $uri[0] ? '/' : '' ) . $uri;
 }
 
 /* Main() */

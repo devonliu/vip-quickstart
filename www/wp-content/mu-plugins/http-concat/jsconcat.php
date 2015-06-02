@@ -73,12 +73,18 @@ class WPcom_JS_Concat extends WP_scripts {
 				$do_concat = false;
 
 			// Concat and canonicalize the paths only for
-			// existing scripts that aren't outside ABSPATH
+			// existing scripts that aren't outside ABSPATH (or ABSPATH/../ for VIP setup)
 			$js_realpath = realpath( ABSPATH . $js_url['path'] );
-			if ( ! $js_realpath || 0 !== strpos( $js_realpath, ABSPATH ) )
+
+			// need to look one level up for wp-content in VIP setup
+			$parentABSPATH = dirname(ABSPATH) . '/';
+			if ( ! $js_realpath )
+				$js_realpath = realpath( $parentABSPATH . $js_url['path'] );
+
+			if ( ! $js_realpath || 0 !== strpos( $js_realpath, $parentABSPATH ) )
 				$do_concat = false;
 			else
-				$js_url['path'] = substr( $js_realpath, strlen( ABSPATH ) - 1 );
+				$js_url['path'] = substr( $js_realpath, strlen( $parentABSPATH ) - 1 );
 
 			if ( true === $do_concat ) {
 				if ( !isset( $javascripts[$level] ) )
@@ -106,7 +112,7 @@ class WPcom_JS_Concat extends WP_scripts {
 				array_map( array( $this, 'print_extra_script' ), $js_array['handles'] );
 
 				if ( count( $js_array['paths'] ) > 1) {
-					$paths = array_map( function( $url ) { return ABSPATH . $url; }, $js_array['paths'] );
+					$paths = array_map( function( $url ) { return dirname(ABSPATH) . $url; }, $js_array['paths'] );
 					$mtime = max( array_map( 'filemtime', $paths ) );
 					$path_str = implode( $js_array['paths'], ',' ) . "?m=${mtime}j";
 
@@ -137,7 +143,7 @@ class WPcom_JS_Concat extends WP_scripts {
 		if ( ! isset( $parts['path'] ) || empty( $parts['path'] ) )
 			return $url;
 
-		$file = ABSPATH . ltrim( $parts['path'], '/' );
+		$file = dirname(ABSPATH) . ltrim( $parts['path'], '/' );
 
 		$mtime = false;
 		if ( file_exists( $file ) )

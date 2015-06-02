@@ -73,12 +73,18 @@ class WPcom_CSS_Concat extends WP_Styles {
 				$do_concat = false;
 
 			// Concat and canonicalize the paths only for
-			// existing scripts that aren't outside ABSPATH
+			// existing scripts that aren't outside ABSPATH (or ABSPATH/../ for VIP setup)
 			$css_realpath = realpath( ABSPATH . $css_url['path'] );
-			if ( ! $css_realpath || 0 !== strpos( $css_realpath, ABSPATH ) )
+
+			// need to look one level up for wp-content in VIP setup
+			$parentABSPATH = dirname(ABSPATH) . '/';
+			if ( ! $css_realpath )
+				$css_realpath = realpath( $parentABSPATH . $css_url['path'] );
+
+			if ( ! $css_realpath || 0 !== strpos( $css_realpath, $parentABSPATH ) )
 				$do_concat = false;
 			else
-				$css_url['path'] = substr( $css_realpath, strlen( ABSPATH ) - 1 );
+				$css_url['path'] = substr( $css_realpath, strlen( $parentABSPATH ) - 1 );
 
 			// Allow plugins to disable concatenation of certain stylesheets.
 			$do_concat = apply_filters( 'css_do_concat', $do_concat, $handle );
@@ -112,7 +118,7 @@ class WPcom_CSS_Concat extends WP_Styles {
 					}
 					continue;
 				} elseif ( count( $css ) > 1) {
-					$paths = array_map( function( $url ) { return ABSPATH . $url; }, $css );
+					$paths = array_map( function( $url ) { return dirname(ABSPATH) . $url; }, $css );
 					$mtime = max( array_map( 'filemtime', $paths ) );
 					$path_str = implode( $css, ',' ) . "?m=${mtime}j";
 
@@ -142,7 +148,7 @@ class WPcom_CSS_Concat extends WP_Styles {
 		if ( ! isset( $parts['path'] ) || empty( $parts['path'] ) )
 			return $url;
 
-		$file = ABSPATH . ltrim( $parts['path'], '/' );
+		$file = dirname(ABSPATH) . ltrim( $parts['path'], '/' );
 
 		$mtime = false;
 		if ( file_exists( $file ) )
